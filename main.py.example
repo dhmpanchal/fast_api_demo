@@ -1,0 +1,40 @@
+from fastapi import FastAPI, Depends
+from typing import Optional
+from sqlalchemy.orm import Session
+from blog.schemas import Blog
+from blog.database import engine, get_db
+from blog import models
+
+app = FastAPI()
+models.Base.metadata.create_all(bind=engine)
+
+
+@app.get('/blog')
+def blog_list(limit=10, published: bool = True, sort: Optional[str] = None):
+    if published:
+        return {'data': f'{limit} published blogs from db'}
+    else:
+        return {'data': f'{limit} blogs from db'}
+
+@app.get('/blog/{id}')
+def blog_detail(id: int):
+    return {'blog': id}
+
+@app.get('/blog/{blog_id}/comments')
+def get_blog_comments(blog_id: int):
+    return {'comments': blog_id}
+
+@app.get('/blog/unpublished/')
+def get_all_unpublished_articles():
+    return {'comments': "unpublished articles"}
+
+@app.post('/blog/create')
+def create_blog(request: Blog, db: Session = Depends(get_db)):
+    new_blog = models.Blog(title=request.title, body=request.body)
+    db.add(new_blog)
+    db.commit()
+    db.refresh(new_blog)
+    return {
+        'message': "blog created successfully!",
+        'data': new_blog
+    }
